@@ -1,0 +1,56 @@
+{
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "token",
+      "description": "",
+      "password": true
+    }
+  ],
+  "servers": {
+    "MCP_DOCKER": {
+      "command": "docker",
+      "args": [
+        "mcp",
+        "gateway",
+        "run",
+        "--long-lived"
+      ],
+      "type": "stdio"
+    },
+    "copacetic-mcp-server": {
+      "command": "${env:HOME}/pathToCopaceticMCPBinary",
+      "args": [],
+      "type": "stdio"
+    },
+    "copacetic-docker-in-docker": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "--mount",
+        "type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock",
+        "--mount",
+        "type=bind,source=${env:HOME}/.docker/config.json,target=/root/.docker/config.json",
+        "ghcr.io/project-copacetic/mcp-server:latest"
+      ],
+      "env": {
+        "DOCKER_HOST": "unix:///var/run/docker.sock"
+      }
+    },
+    "copacetic-docker-reg-auth": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "ghcr.io/project-copacetic/mcp-server:latest"
+      ],
+      "env": {
+        "REGISTRY_TOKEN": "${input:token}",
+        "REGISTRY_HOST": "nameOfRegistry"
+      }
+    }
+  }
+}

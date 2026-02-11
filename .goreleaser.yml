@@ -1,0 +1,140 @@
+# GoReleaser configuration for mcp-server
+# Documentation: https://goreleaser.com
+
+version: 2
+
+before:
+  hooks:
+    # Remove unused dependencies
+    - go mod tidy
+    # Generate any additional files if needed
+    # - go generate ./...
+
+builds:
+  - id: "mcp-server-server"
+    main: ./cmd/copa-mcp-server/main.go
+    binary: copacetic-mcp-server
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    # Build tags and flags
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+    # Ignore builds that don't make sense
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+  - id: "mcp-server-client"
+    main: ./cmd/copa-mcp-client/main.go
+    binary: copacetic-mcp-client
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+    ignore:
+      - goos: windows
+        goarch: arm64
+
+archives:
+  - id: default
+    files:
+      - README.md
+      - LICENSE*
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}
+
+checksum:
+  name_template: "checksums.txt"
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+      - "^style:"
+      - "^refactor:"
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: "Bug fixes"
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: "Performance improvements"
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: Others
+      order: 999
+
+release:
+  # Repository to upload the release to
+  github:
+    owner: project-copacetic
+    name: mcp-server
+
+  # Create release draft
+  draft: false
+
+  # Mark as prerelease
+  prerelease: auto
+
+  # Release name template
+  name_template: "{{.ProjectName}} v{{.Version}}"
+
+  # Release notes
+  header: |
+    ## Container Patching with Copacetic MCP Server v{{ .Version }}
+
+    This release includes cross-platform binaries for the Copacetic MCP server and client.
+
+  footer: |
+    **Full Changelog**: https://github.com/project-copacetic/mcp-server/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+    ### Usage
+
+    1. Download the appropriate binary for your platform
+    2. Extract the archive
+    3. Run the MCP server: `.copacetic-mcp-server`
+
+    For more information, see the [README](https://github.com/project-copacetic/mcp-server/blob/main/README.md).
+
+# Docker image: build and push single-arch (linux/amd64) image to GitHub Container Registry
+# Using single arch to simplify and ensure GHCR package associates cleanly with the repo.
+dockers:
+  - image_templates:
+      - "ghcr.io/project-copacetic/mcp-server:{{ .Version }}"
+      - "ghcr.io/project-copacetic/mcp-server:latest"
+    dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--platform=linux/amd64"
