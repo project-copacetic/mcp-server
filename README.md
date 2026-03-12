@@ -1,5 +1,7 @@
 # copacetic-mcp
 
+> 📣 This project is not officially supported and may not receive updates.
+
 A Model Context Protocol (MCP) server for automated container patching using [Copacetic](https://github.com/project-copacetic/copacetic).
 
 ## MCP Tools
